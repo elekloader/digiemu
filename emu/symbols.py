@@ -364,6 +364,20 @@ class Opcode:
         return load_addr + hits[0], 'unique opcode at 0x%08x' % (load_addr + hits[0])
 
 
+class InstructionOpcode(Opcode):
+    """Instruction signature: ColdFire instruction addresses are word-aligned.
+
+    Filter only addresses that cannot be instruction starts; retain the strict
+    uniqueness requirement when multiple aligned occurrences are present.
+    """
+    def resolve(self, img, load_addr, got):
+        hits = [off for off in self.pat.positions(img) if (load_addr + off) % 2 == 0]
+        if len(hits) != 1:
+            return None, ('%d aligned occurrence(s) of the %d-byte opcode, need exactly 1'
+                          % (len(hits), len(self.pat)))
+        return load_addr + hits[0], 'unique aligned instruction opcode at 0x%08x' % (load_addr + hits[0])
+
+
 class Sig:
     """A masked signature: `ref` is an `H` (or, for tests and new work, the
     literal hex it was made from -- see the module docstring). Any 4-byte
@@ -704,7 +718,7 @@ SYMBOLS = [
     # A second, unrelated aPLib-style depacker's copy-loop entry, embedded in
     # MAIN OS itself (see dspboot.py). This exact 8-byte opcode idiom occurs
     # exactly once in both images tested.
-    ('depack_copy', Opcode(H(8, '', '0:12da12da', '21e52dd3939b470010200632037e76d6')), True),
+    ('depack_copy', InstructionOpcode(H(8, '', '0:12da12da', '21e52dd3939b470010200632037e76d6')), True),
 
     # flash_read: HLE'd entirely (dspboot patches its call site to copy
     # straight out of the emulated flash and return), so what is captured

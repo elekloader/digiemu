@@ -307,7 +307,7 @@ wait 1000              run 1000 emulated ms
 tap PLAY [HOLD] [AFTER] press and release a key (defaults 100 ms, 300 ms)
 press FUNC [AFTER]     hold a key down
 release FUNC [AFTER]   let it go
-turn A +3 [AFTER]      turn an encoder by detents (default 150 ms after)
+turn A +3 [AFTER]      turn an encoder by detents (40 ms between mk1 detents; default 150 ms after)
 snap playing           name this moment: its screen is compared and saved
 ```
 

@@ -311,17 +311,25 @@ class Session:
         if channel is None:
             raise SessionError('encoder %r is not on the %s panel'
                                % (encoder, self.device.name))
-        counts = detents * getattr(self.device, 'encoder_counts', 1)
-        if self.model_panel is not None and counts:
-            self.model_panel.turn(channel, counts)
-            self.inputs.append((round(self.ms, 3),
-                                'turn %s %+d' % (encoder, counts)))
-            counts = 0
-        while counts:
-            step = max(-127, min(127, counts))
-            self._feed(panelin.encode_encoder(channel, step),
-                       'turn %s %+d' % (encoder, step))
-            counts -= step
+        counts_per_detent = getattr(self.device, 'encoder_counts', 1)
+        if self.model_panel is not None:
+            # Model panels are a distinct emulated scan path; retain its batching.
+            counts = detents * counts_per_detent
+            if counts:
+                self.model_panel.turn(channel, counts)
+                self.inputs.append((round(self.ms, 3),
+                                    'turn %s %+d' % (encoder, counts)))
+        else:
+            # A single large UART delta is clamped by the firmware's encoder
+            # flush and misses its time-based acceleration. A scripted detent
+            # represents one panel wheel event, just like the interactive UI.
+            direction = 1 if detents > 0 else -1
+            for i in range(abs(detents)):
+                step = direction * counts_per_detent
+                self._feed(panelin.encode_encoder(channel, step),
+                           'turn %s %+d' % (encoder, step))
+                if i + 1 < abs(detents):
+                    self.run_ms(40)
         self.run_ms(after_ms)
 
     # -- names ------------------------------------------------------------------
